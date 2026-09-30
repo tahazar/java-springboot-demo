@@ -1,0 +1,21 @@
+# Test-only: an in-memory H2 database in Oracle compatibility mode stands in for the existing Oracle schema.
+spring:
+  datasource:
+    url: jdbc:h2:mem:authdb;MODE=Oracle;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=TRUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+    hikari:
+      connection-test-query: SELECT 1 FROM DUAL
+      data-source-properties: {}
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:test-schema.sql
+
+app:
+  security:
+    jwt:
+      # Test-only key (32 random bytes, base64). Never reuse outside tests.
+      secret: 3q2+7wABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhs=
+      issuer: jwt-oracle-auth-test

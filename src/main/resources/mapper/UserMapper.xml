@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  Maps to EXISTING Oracle tables; no DDL is created by this application.
+  Rename the tables/columns below to match your schema (keep the column ALIASES so the result map still works):
+
+    APP_USERS       USER_ID (VARCHAR2), PASSWORD_HASH (VARCHAR2), PASSWORD_EXPIRY_DATE (DATE or TIMESTAMP, NULL = never expires)
+    APP_USER_ROLES  USER_ID (VARCHAR2), ROLE_NAME (VARCHAR2)   - one row per role
+
+  If your schema stores the date the password was last changed instead of an expiry date, compute it in SQL, e.g.
+    u.PWD_CHANGED_DATE + 90 AS PASSWORD_EXPIRY_DATE
+-->
+<mapper namespace="com.example.auth.user.UserMapper">
+
+    <resultMap id="userAccountResultMap" type="com.example.auth.user.UserAccount">
+        <!-- <id> lets MyBatis collapse the one-row-per-role join into a single UserAccount -->
+        <id     property="userId"            column="USER_ID"              jdbcType="VARCHAR"/>
+        <result property="passwordHash"      column="PASSWORD_HASH"        jdbcType="VARCHAR"/>
+        <result property="passwordExpiresAt" column="PASSWORD_EXPIRY_DATE" jdbcType="TIMESTAMP"
+                javaType="java.time.LocalDateTime"/>
+        <collection property="roles" ofType="java.lang.String" javaType="java.util.LinkedHashSet"
+                    notNullColumn="ROLE_NAME">
+            <result column="ROLE_NAME" jdbcType="VARCHAR"/>
+        </collection>
+    </resultMap>
+
+    <!-- LEFT JOIN so a user with no roles is still found (and can authenticate with no authorities). -->
+    <select id="findByUserId" resultMap="userAccountResultMap">
+        SELECT u.USER_ID              AS USER_ID,
+               u.PASSWORD_HASH        AS PASSWORD_HASH,
+               u.PASSWORD_EXPIRY_DATE AS PASSWORD_EXPIRY_DATE,
+               r.ROLE_NAME            AS ROLE_NAME
+          FROM APP_USERS u
+          LEFT JOIN APP_USER_ROLES r
+            ON r.USER_ID = u.USER_ID
+         WHERE u.USER_ID = #{userId,jdbcType=VARCHAR}
+    </select>
+
+</mapper>
